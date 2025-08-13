@@ -1,22 +1,124 @@
 
+
 ---
 
-## 1) “TCP layer” protocols (Transport layer of TCP/IP)
+# TCP/IP Model & Protocols — Full Layer-wise Guide
 
-| Protocol                                        | Orientation           | Reliability/Ordering                                                             | Congestion Ctrl              | Typical Uses                                | Notes                                                                                                                                       |
-| ----------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TCP** (Transmission Control Protocol)         | Stream                | Reliable, ordered, byte-stream; retransmits lost data; flow control (rwnd); SACK | Yes (e.g., Reno, CUBIC, BBR) | Web (HTTP/1.1/2), SMTP, SSH, SQL            | Connection-oriented (3WH); supports **MSS**, **Window Scaling**, **Timestamps**, **SACK** via options.                                      |
-| **UDP** (User Datagram Protocol)                | Message               | No reliability/order; best-effort                                                | No (apps must implement)     | DNS, VoIP, gaming, streaming, QUIC          | Very low overhead; preserves message boundaries. App-level ARQ/FEC if needed.                                                               |
-| **SCTP** (Stream Control Transmission Protocol) | Message, multi-stream | Reliable & ordered **per stream**                                                | Yes                          | Telecom signaling, some WebRTC data         | Multi-homing (path failover), 4-way cookie handshake, less common on the public Internet.                                                   |
-| **DCCP** (Datagram Congestion Control Protocol) | Message               | Unreliable; **with** congestion control                                          | Yes                          | Media where loss is OK but fairness matters | Experimental/rare.                                                                                                                          |
-| **QUIC** (over UDP)                             | Stream, multiplexed   | Reliable streams (user-space)                                                    | Yes                          | **HTTP/3**, modern apps                     | Lives on UDP; built-in **TLS 1.3**, fast/0-RTT resume, better mobility. Not a kernel “TCP,” but effectively a modern transport used widely. |
+The **TCP/IP model** has **4 layers** (sometimes shown as 5 with “Physical” included from OSI).
+Each layer has its own set of protocols that serve specific purposes.
 
-**When to pick what?**
+---
 
-* **TCP**: when you need reliability + simplicity for developers.
-* **UDP/QUIC**: when latency matters and you can tolerate/handle loss (streaming, real-time) or you want HTTP/3 features.
-* **SCTP**: many streams without head-of-line blocking, multi-homing (niche).
-* **DCCP**: academia/special cases.
+## **1) Application Layer**
+
+**Purpose:**
+Provides services directly to the end user or applications. Encodes/decodes data into a form understood by both sending and receiving applications.
+
+**Key Protocols:**
+
+| Protocol       | Purpose                                    | Notes/Examples                                                                                     |
+| -------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| **HTTP/HTTPS** | Web browsing, API communication            | HTTPS uses TLS for encryption; HTTP/2, HTTP/3 (QUIC) for speed.                                    |
+| **FTP**        | File transfer                              | Uses TCP ports 20 & 21; can operate in active or passive mode.                                     |
+| **SFTP**       | Secure File Transfer over SSH              | Runs over port 22; encrypted.                                                                      |
+| **SMTP**       | Send email                                 | TCP port 25; often with STARTTLS for encryption.                                                   |
+| **IMAP/POP3**  | Receive/read email                         | IMAP (port 143) allows sync; POP3 (port 110) downloads. Secure variants: IMAPS (993), POP3S (995). |
+| **DNS**        | Name resolution (domain ↔ IP)              | Uses UDP (port 53) primarily, TCP for large responses or zone transfers.                           |
+| **DHCP**       | Dynamic host configuration (IP assignment) | UDP ports 67/68; automates IP, mask, gateway, DNS assignment.                                      |
+| **SSH**        | Secure remote login                        | TCP port 22; encrypted shell sessions.                                                             |
+| **Telnet**     | Remote login (insecure)                    | Plain-text; largely obsolete.                                                                      |
+| **SNMP**       | Network monitoring & management            | UDP ports 161/162; GET/SET/Trap messages.                                                          |
+| **NTP**        | Network time synchronization               | UDP port 123; precise clock sync.                                                                  |
+| **MQTT**       | Lightweight IoT messaging                  | TCP/UDP; designed for low-bandwidth devices.                                                       |
+| **RTP/RTCP**   | Real-time audio/video streaming            | Often over UDP; used in VoIP, video calls.                                                         |
+| **SIP**        | Session initiation (VoIP calls)            | Sets up/modifies/terminates multimedia sessions.                                                   |
+
+---
+
+## **2) Transport Layer**
+
+**Purpose:**
+Ensures end-to-end communication, reliability, and correct sequencing.
+
+**Key Protocols:**
+
+| Protocol                                        | Purpose                                   | Features                                                                |
+| ----------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| **TCP** (Transmission Control Protocol)         | Reliable, ordered, error-checked delivery | Connection-oriented, 3-way handshake, flow control, congestion control. |
+| **UDP** (User Datagram Protocol)                | Fast, connectionless data transfer        | No reliability or ordering; used for DNS, streaming, gaming.            |
+| **SCTP** (Stream Control Transmission Protocol) | Reliable, multi-stream delivery           | Multi-homing, avoids head-of-line blocking.                             |
+| **DCCP** (Datagram Congestion Control Protocol) | Congestion-controlled, unreliable         | Used in streaming/media scenarios.                                      |
+| **QUIC**                                        | Modern transport over UDP                 | Multiplexed streams, 0-RTT TLS 1.3, basis of HTTP/3.                    |
+
+---
+
+## **3) Internet Layer**
+
+**Purpose:**
+Responsible for logical addressing, routing, and path determination.
+
+**Key Protocols:**
+
+| Protocol          | Purpose                               | Notes                                                   |
+| ----------------- | ------------------------------------- | ------------------------------------------------------- |
+| **IPv4**          | 32-bit addressing and routing         | Supports fragmentation; address exhaustion issues.      |
+| **IPv6**          | 128-bit addressing, modernized header | Eliminates NAT, supports SLAAC, more efficient routing. |
+| **ICMP**          | Error reporting, diagnostics          | E.g., “ping” uses ICMP Echo Request/Reply.              |
+| **ICMPv6**        | IPv6 control messages                 | Includes Neighbor Discovery Protocol (NDP).             |
+| **ARP**           | IPv4 address ↔ MAC mapping            | Works within a LAN; replaced by NDP in IPv6.            |
+| **RARP**          | Reverse mapping (MAC → IP)            | Mostly obsolete; replaced by DHCP/BOOTP.                |
+| **IGMP**          | IPv4 multicast group management       | Hosts join/leave multicast groups.                      |
+| **EIGRP** (Cisco) | Dynamic routing                       | Advanced Distance Vector (Cisco proprietary).           |
+| **OSPF**          | Link-state routing within an AS       | Finds shortest paths using Dijkstra’s algorithm.        |
+| **BGP**           | Path-vector routing between ASes      | Used on the global Internet to exchange routes.         |
+
+---
+
+## **4) Network Access / Link Layer**
+
+**Purpose:**
+Moves data between physical devices over the same network segment. Handles framing, MAC addressing, and physical media access.
+
+**Key Protocols & Standards:**
+
+| Protocol/Standard                 | Purpose                        | Notes                                                     |
+| --------------------------------- | ------------------------------ | --------------------------------------------------------- |
+| **Ethernet (IEEE 802.3)**         | Wired LAN communication        | Uses MAC addresses; full/half-duplex.                     |
+| **Wi-Fi (IEEE 802.11)**           | Wireless LAN                   | WPA2/WPA3 for encryption.                                 |
+| **PPP** (Point-to-Point Protocol) | Serial link encapsulation      | Used in DSL, VPN tunnels.                                 |
+| **HDLC**                          | High-level data link control   | WAN connections, framing.                                 |
+| **Frame Relay**                   | Packet-switched WAN            | Mostly obsolete.                                          |
+| **ATM**                           | Asynchronous Transfer Mode     | Fixed 53-byte cells; used in legacy telecom.              |
+| **MAC** (Media Access Control)    | Addressing at link layer       | Unique 48-bit (or 64-bit) IDs.                            |
+| **VLAN** (IEEE 802.1Q)            | Virtual LAN tagging            | Adds 4-byte VLAN tag to Ethernet frames.                  |
+| **MPLS**                          | Multi-Protocol Label Switching | Works between L2 and L3 (“Layer 2.5”); speeds up routing. |
+
+---
+
+## **Diagram — TCP/IP Layers vs OSI Model**
+
+```
+TCP/IP Model        OSI Model          Examples of Protocols
+-------------------------------------------------------------
+Application         Application       HTTP, FTP, DNS, SMTP
+                    Presentation      (integrated in Application in TCP/IP)
+                    Session           
+Transport           Transport         TCP, UDP, SCTP, QUIC
+Internet            Network           IPv4, IPv6, ICMP, OSPF, BGP
+Network Access      Data Link         Ethernet, PPP, Wi-Fi, MPLS
+                    Physical          Copper, Fiber, Radio
+```
+
+---
+
+## **Summary Table**
+
+| Layer           | Main Function                | Protocol Examples                |
+| --------------- | ---------------------------- | -------------------------------- |
+| **Application** | User-facing services         | HTTP, FTP, DNS, SMTP, SNMP, DHCP |
+| **Transport**   | End-to-end delivery          | TCP, UDP, SCTP, QUIC             |
+| **Internet**    | Logical addressing & routing | IPv4, IPv6, ICMP, ARP, OSPF, BGP |
+| **Link**        | Local delivery over media    | Ethernet, Wi-Fi, PPP, VLAN       |
 
 ---
 
